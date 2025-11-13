@@ -4,13 +4,7 @@ Notion → Slack Reminder Script
 仕様:
 - 固定メンション: 浅井さん(U09QNJB06DS), ケントさん(U084EL20EV6)
 - 実施責任者 (rich_text) と URL (url) を参照
-- 出力文面:
-    @浅井さん　@ケントさん
-    【リマインド】
-    タスク名
-    ・「実施責任者」
-    「URL」
-- ログ出力: reminder.log に記録
+
 
 石井寛大　U095FDQE5NF
 """
@@ -431,7 +425,7 @@ def main():
 
             msg = (
                 f"⏰ *本日のリマインド*\n"
-                f"・件名：*{title}*\n"
+                f"・業務従事者：*{title}*\n"
                 f"・担当：{display_names}\n"
                 f"・Notion：{notion_link}\n"
                 + (f"・担当者URL：{chosen_url}\n" if chosen_url else "")
