@@ -281,7 +281,7 @@ def build_mentions(page: dict, name_index: Dict[str, str]) -> Tuple[str, List[st
 # ---------- メイン ----------
 def main():
     today = today_iso(TZ)
-    pages = notion_query_today(DB_ID, "リマインド日", today)
+    pages = notion_query_today(DB_ID, "面談リマインド日", today)
     if not pages:
         print("No reminders today.")
         return
@@ -407,7 +407,7 @@ def main():
     logging.info(f"=== Reminder run for {today} ===")
 
     try:
-        pages = notion_query_today(DB_ID, "リマインド日", today)
+        pages = notion_query_today(DB_ID, "面談リマインド日", today)
         if not pages:
             logging.info("No reminders today.")
 
