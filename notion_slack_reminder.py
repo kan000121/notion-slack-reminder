@@ -30,6 +30,7 @@ import requests
 import logging
 from dotenv import load_dotenv
 
+
 # --- ENV ---
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -330,10 +331,13 @@ def extract_richtext(page: dict, prop: str) -> str:
     except KeyError:
         return "（未設定）"
     
-def extract_assignees(page: dict, prop_name: str = "実施責任者") -> list[str]:
+def extract_assignees(page: dict, prop_name: str = "実施責任者") -> List[str]:
     """
-    Notionの「実施責任者」を People 優先で取得。
-    無ければ rich_text を分割して取得。
+    Notionの「実施責任者」を型に応じて取り出す:
+      - people       → people[].name
+      - select       → select.name
+      - multi_select → multi_select[].name
+      - rich_text    → 分割
     """
     try:
         prop = page["properties"][prop_name]
@@ -341,19 +345,32 @@ def extract_assignees(page: dict, prop_name: str = "実施責任者") -> list[st
         return []
 
     t = prop.get("type")
+
     if t == "people":
-        ppl = prop.get("people", [])
-        names = [p.get("name", "").strip() for p in ppl if p.get("name")]
-        return [n for n in names if n]
-    elif t == "rich_text":
-        rt = "".join([r.get("plain_text", "") for r in prop.get("rich_text", [])]).strip()
+        ppl = prop.get("people", []) or []
+        names = [ (p.get("name") or "").strip() for p in ppl ]
+        return [ n for n in names if n ]
+
+    if t == "select":
+        sel = prop.get("select") or {}
+        name = (sel.get("name") or "").strip()
+        return [name] if name else []
+
+    if t == "multi_select":
+        arr = prop.get("multi_select", []) or []
+        names = [ (x.get("name") or "").strip() for x in arr ]
+        return [ n for n in names if n ]
+
+    if t == "rich_text":
+        rt = "".join([ r.get("plain_text","") for r in prop.get("rich_text",[]) ]).strip()
         if not rt:
             return []
-        # 区切り文字：読点・中点・スラッシュ・改行など
+        import re
         parts = re.split(r"[、・,/／\n\r]+", rt)
-        return [p.strip() for p in parts if p.strip()]
-    else:
-        return []
+        return [ p.strip() for p in parts if p.strip() ]
+
+    return []
+
 
 def build_display_and_urls(page: dict) -> tuple[str, list[str]]:
     """表示用の『実施責任者』文字列と、PERSON_URL_MAP から解決したURL一覧を返す"""
@@ -421,7 +438,7 @@ def main():
                 update_notion_url_property(page_id, chosen_url)
                 logging.info(f"[{title}] URL updated to {chosen_url}")
 
-            #mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
+            mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
 
             msg = (
                 f"⏰ *本日のリマインド*\n"
@@ -454,7 +471,7 @@ def main():
 
             # 文章：NotionページURL ＋ 実施責任者URL（複数なら全部）
             lines = [
-                f"{mention_text}",
+                + f"{MENTION_FIXED}\m",
                 "【リマインド】",
                 f"{title}",
                 f"Notionページ：{notion_link}",
