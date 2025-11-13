@@ -12,3 +12,25 @@
 2025-11-12 14:21:32 [INFO] [(無題)] URL updated to https://example.com/k-ishii
 2025-11-12 14:21:32 [INFO] [(無題)] Slack通知送信済み → 石井 寛大
 2025-11-12 14:21:33 [INFO] ✅ Completed 1 reminder(s).
+2025-11-12 14:27:28 [INFO] === Reminder run for 2025-11-12 ===
+2025-11-12 14:27:30 [INFO] [(無題)] 通知完了 → 実施責任者:（未設定） / URLs:なし
+2025-11-12 14:27:31 [INFO] ✅ Completed 1 reminder(s).
+2025-11-12 14:32:45 [INFO] === Reminder run for 2025-11-12 ===
+2025-11-12 14:32:45 [ERROR] ❌ Error: expected string or bytes-like object, got 'list'
+Traceback (most recent call last):
+  File "/Users/kanta_mac/Linux/リマインドオートメーション/notion_slack_reminder.py", line 170, in main
+    names = split_names(jisseki_raw)
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/kanta_mac/Linux/リマインドオートメーション/notion_slack_reminder.py", line 141, in split_names
+    parts = re.split(r"[、・,/／\n\r]+", s)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/kanta_mac/anaconda3/lib/python3.11/re/__init__.py", line 206, in split
+    return _compile(pattern, flags).split(string, maxsplit)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected string or bytes-like object, got 'list'
+2025-11-12 14:33:41 [INFO] === Reminder run for 2025-11-12 ===
+2025-11-12 14:33:48 [INFO] [(無題)] 通知完了 → 実施責任者:岡 郁樹 / URLs:['https://example.com/oka']
+2025-11-12 14:33:49 [INFO] ✅ Completed 1 reminder(s).
+2025-11-12 14:34:47 [INFO] === Reminder run for 2025-11-12 ===
+2025-11-12 14:34:48 [INFO] [(無題)] 通知完了 → 実施責任者:岡 郁樹 / URLs:['https://example.com/oka']
+2025-11-12 14:34:49 [INFO] ✅ Completed 1 reminder(s).
