@@ -1,7 +1,7 @@
 name: Notion → Slack Reminder
 on:
   schedule:
-    - cron: '0 0 * * *'   # JST 9:00
+    - cron: '0 9 * * *'   # JST 9:00
   workflow_dispatch:
 
 jobs:
