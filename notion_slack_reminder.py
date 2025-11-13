@@ -421,7 +421,7 @@ def main():
                 update_notion_url_property(page_id, chosen_url)
                 logging.info(f"[{title}] URL updated to {chosen_url}")
 
-            mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
+            #mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
 
             msg = (
                 f"⏰ *本日のリマインド*\n"
