@@ -516,4 +516,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-channelではなく、mention_FIXEDでメンションしてほしい。あと、実施責任者は選択型になってるので変えてください。
