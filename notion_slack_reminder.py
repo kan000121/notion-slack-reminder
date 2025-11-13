@@ -13,7 +13,7 @@ Notion → Slack Reminder Script
 Notion → Slack Reminder Script (fixed mentions + dual URLs)
 - 固定メンション: 浅井さん(U09QNJB06DS), ケントさん(U084EL20EV6)
 - 実施責任者 (rich_text) から名前を抽出（スペース差吸収）→ PERSON_URL_MAP_JSON で個人URL解決
-- Slackには「NotionページURL」と「担当者URL(1人以上なら複数行)」を両方掲載
+- Slackには「NotionページURL」と「実施責任者URL(1人以上なら複数行)」を両方掲載
 """
 
 
@@ -243,7 +243,7 @@ def build_mentions(page: dict, name_index: Dict[str, str]) -> Tuple[str, List[st
 
     # 1) 名前優先
     for name, email in assigned:
-        display_names.append(name or email or "（担当者未設定）")
+        display_names.append(name or email or "（実施責任者未設定）")
         key = normalize_name(name)
         uid = name_index.get(key)
         if uid and uid not in seen:
@@ -270,7 +270,7 @@ def build_mentions(page: dict, name_index: Dict[str, str]) -> Tuple[str, List[st
             mention_ids.append(uid)
             seen.add(uid)
 
-    return ("、".join([n for n in display_names if n]) or "（担当者未設定）"), mention_ids, matched_urls
+    return ("、".join([n for n in display_names if n]) or "（実施責任者未設定）"), mention_ids, matched_urls
 
 # ---------- メイン ----------
 def main():
@@ -296,15 +296,15 @@ def main():
             update_notion_url_property(page_id, chosen_url)
 
         # メンション文
-        mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
+        #mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
 
         # Slack本文（対象者URLがあれば載せる）
         extra_lines = []
         if chosen_url:
-            extra_lines.append(f"・担当者URL：{chosen_url}")
+            extra_lines.append(f"・実施責任者URL：{chosen_url}")
         elif personal_urls:
             # 複数あった時の参考表示（Notionには先頭のみ反映）
-            extra_lines.append("・担当者URL候補：\n" + "\n".join([f"  - {u}" for u in personal_urls]))
+            extra_lines.append("・実施責任者URL候補：\n" + "\n".join([f"  - {u}" for u in personal_urls]))
 
         msg = (
             f"⏰ *本日のリマインド*\n"
@@ -428,7 +428,7 @@ def main():
                 f"・業務従事者：*{title}*\n"
                 f"・担当：{display_names}\n"
                 f"・Notion：{notion_link}\n"
-                + (f"・担当者URL：{chosen_url}\n" if chosen_url else "")
+                + (f"・実施責任者URL：{chosen_url}\n" if chosen_url else "")
                 + f"\n{mention_text} 対応お願いします。"
             )
 
@@ -452,7 +452,7 @@ def main():
             # 固定メンション・・
             mention_text = "<@U09QNJB06DS>　<@U084EL20EV6>"
 
-            # 文章：NotionページURL ＋ 担当者URL（複数なら全部）
+            # 文章：NotionページURL ＋ 実施責任者URL（複数なら全部）
             lines = [
                 f"{mention_text}",
                 "【リマインド】",
@@ -462,9 +462,9 @@ def main():
             ]
             if person_urls:
                 for u in person_urls:
-                    lines.append(f"担当者URL：{u}")
+                    lines.append(f"実施責任者URL：{u}")
             else:
-                lines.append("担当者URL：「（未登録）」")
+                lines.append("実施責任者URL：「（未登録）」")
 
             msg = "\n".join(lines)
 
