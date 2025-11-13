@@ -120,7 +120,7 @@ def notion_query_today(db_id: str, date_prop: str, today: str):
     res.raise_for_status()
     return res.json().get("results", [])
 
-def extract_title(page: dict, title_prop="名前") -> str:
+def extract_title(page: dict, title_prop="業務従事者") -> str:
     try:
         t = page["properties"][title_prop]["title"]
         return "".join([r["plain_text"] for r in t]) or "(無題)"
@@ -291,7 +291,7 @@ def main():
     name_index = build_name_index(user_dir)
 
     for p in pages:
-        title = extract_title(p, "名前")
+        title = extract_title(p, "業務実施者")
         page_id = extract_page_id(p)
         display_names, ids, personal_urls = build_mentions(p, name_index)
         notion_link = page_url(p)
@@ -417,7 +417,7 @@ def main():
         name_index = build_name_index(user_dir)
 
         for p in pages:
-            title = extract_title(p, "名前")
+            title = extract_title(p, "業務従事者")
             page_id = extract_page_id(p)
             display_names, ids, personal_urls = build_mentions(p, name_index)
             notion_link = page_url(p)
@@ -449,7 +449,7 @@ def main():
 
         for p in pages:
             title_candidate = extract_richtext(p, "業務従事者")
-            title = title_candidate if title_candidate not in ("", "（未設定）") else (extract_title(p, "名前") or "（無題）")
+            title = title_candidate if title_candidate not in ("", "（未設定）") else (extract_title(p, "業務従事者") or "（無題）")
             notion_link = page_url(p)
 
             # ← ここが肝：People/テキスト両対応
