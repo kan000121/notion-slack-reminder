@@ -1,15 +1,12 @@
 name: Schedule Probe
-
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
-
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Print event & time
-        run: |
+      - run: |
           echo "EVENT=${GITHUB_EVENT_NAME}"
           date -u +"UTC %Y-%m-%d %H:%M:%S"
