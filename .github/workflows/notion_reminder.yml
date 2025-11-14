@@ -2,14 +2,10 @@ name: Notion → Slack Reminder
 
 on:
   schedule:
-    - cron: '0 4 * * *'   
+    - cron: '15 4 * * *'   
   workflow_dispatch:
 
-# 同時実行の重複防止（任意だけどおすすめ）
-concurrency:
-  group: notion-slack-reminder
-  cancel-in-progress: false
-
+  
 jobs:
   run:
     runs-on: ubuntu-latest
