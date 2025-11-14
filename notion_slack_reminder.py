@@ -124,7 +124,11 @@ def extract_title(page: dict, title_prop="業務従事者") -> str:
 def extract_page_id(page: dict) -> str:
     return page.get("id", "")
 
-def extract_people(page: dict, prop_name: str = "実施責任者") -> List[str]:
+def extract_people(page: dict, prop_name: str = "実施責任者") -> List[Tuple[str, Optional[str]]]:
+    """
+    可能なら (name, email) のタプルを返す。
+    選択/テキストはメールが無いので (name, None)。
+    """
     try:
         prop = page["properties"][prop_name]
     except KeyError:
@@ -133,30 +137,34 @@ def extract_people(page: dict, prop_name: str = "実施責任者") -> List[str]:
     t = prop.get("type")
 
     if t == "people":
-        ppl = prop.get("people", [])
-        names = [p.get("name", "").strip() for p in ppl if p.get("name")]
-        return [n for n in names if n]
+        ppl = prop.get("people", []) or []
+        out = []
+        for p in ppl:
+            prof = p.get("person") or {}
+            email = prof.get("email")
+            name = (p.get("name") or "").strip()
+            out.append((name, email))
+        return out
 
     elif t == "select":
         sel = prop.get("select") or {}
         name = (sel.get("name") or "").strip()
-        return [name] if name else []
+        return [(name, None)] if name else []
 
     elif t == "multi_select":
         arr = prop.get("multi_select", []) or []
-        names = [(x.get("name") or "").strip() for x in arr]
-        return [n for n in names if n]
+        return [((x.get("name") or "").strip(), None) for x in arr if (x.get("name") or "").strip()]
 
     elif t == "rich_text":
         rt = "".join([r.get("plain_text", "") for r in prop.get("rich_text", [])]).strip()
         if not rt:
             return []
-        import re
         parts = re.split(r"[、・,/／\n\r]+", rt)
-        return [p.strip() for p in parts if p.strip()]
+        return [(p.strip(), None) for p in parts if p.strip()]
 
     else:
         return []
+
 
 
 def extract_slackid_fallback(page: dict, prop="SlackID") -> List[str]:
@@ -242,42 +250,59 @@ def build_name_index(users: List[dict]) -> Dict[str, str]:
                 idx[key] = uid
     return idx
 
-# ---------- メンション解決（名前優先） ----------
 def build_mentions(page: dict, name_index: Dict[str, str]) -> Tuple[str, List[str], List[str]]:
     """
     return:
       display_names: 表示用 "A、B"
       mention_ids:   Slack <@uid> 用 ID 群
       matched_personal_urls: 対象者URL（PERSON_URL_MAPに該当した人のURL）複数可
-    優先順位:
-      1) 名前→Slack ID（スペース/大小無視）
-      2) email→Slack ID（users.lookupByEmail）
-      3) SlackID列（Uxxxx）
+
+    入力の assigned は、str / (name,email) / {"name":..,"email":..} のいずれでもOKにする。
     """
-    assigned = extract_people(page, "実施責任者")
+    assigned_raw = extract_people(page, "実施責任者")
     fallback_ids = extract_slackid_fallback(page)
+
+    # 正規化: すべて (name, email) 形式にそろえる
+    assigned: List[Tuple[str, Optional[str]]] = []
+    for item in assigned_raw:
+        name, email = "", None
+        if isinstance(item, str):
+            name = item.strip()
+        elif isinstance(item, (list, tuple)):
+            if len(item) >= 1:
+                name = (item[0] or "").strip()
+            if len(item) >= 2:
+                email = (item[1] or None)
+        elif isinstance(item, dict):
+            name = (item.get("name") or "").strip()
+            email = item.get("email")
+        else:
+            # 予期しない型はスキップ
+            continue
+        if name or email:
+            assigned.append((name, email))
 
     display_names: List[str] = []
     mention_ids: List[str] = []
     seen = set()
     matched_urls: List[str] = []
 
-    # 1) 名前優先
+    # 1) 名前ベース解決 + 個人URL収集
     for name, email in assigned:
-        display_names.append(name or email or "（実施責任者未設定）")
+        display_names.append(name or (email or "（実施責任者未設定）"))
         key = normalize_name(name)
         uid = name_index.get(key)
         if uid and uid not in seen:
             mention_ids.append(uid)
             seen.add(uid)
 
-        # 対象者URLマッチ（スペース差吸収で判定）
+        # PERSON_URL_MAP でURL一致（スペース差吸収）
         if name:
             for target_name, url in PERSON_URL_MAP.items():
                 if normalize_name(target_name) == key and url and url not in matched_urls:
                     matched_urls.append(url)
 
-    # 2) メールで補完
+    # 2) メール→Slack ID 補完
     for name, email in assigned:
         if email:
             uid = slack_lookup_user_id_by_email(email)
@@ -293,56 +318,7 @@ def build_mentions(page: dict, name_index: Dict[str, str]) -> Tuple[str, List[st
 
     return ("、".join([n for n in display_names if n]) or "（実施責任者未設定）"), mention_ids, matched_urls
 
-# ---------- メイン ----------
-def main():
-    today = today_iso(TZ)
-    pages = notion_query_today(DB_ID, "面談リマインド日", today)
-    if not pages:
-        print("No reminders today.")
-        return
 
-    # Slackユーザー名インデックス（名前→UID）
-    user_dir = slack_fetch_user_directory()
-    name_index = build_name_index(user_dir)
-
-    for p in pages:
-        title = extract_title(p, "業務実施者")
-        page_id = extract_page_id(p)
-        display_names, ids, personal_urls = build_mentions(p, name_index)
-        notion_link = page_url(p)
-
-        # 対象者URLが見つかったら NotionのURL列を更新（複数あれば最初を採用）
-        chosen_url = personal_urls[0] if personal_urls else ""
-        if chosen_url:
-            update_notion_url_property(page_id, chosen_url)
-
-        # メンション文
-        #mention_text = " ".join([f"<@{uid}>" for uid in ids]) if ids else "<!channel>"
-
-        # Slack本文（対象者URLがあれば載せる）
-        extra_lines = []
-        if chosen_url:
-            extra_lines.append(f"・実施責任者URL：{chosen_url}")
-        elif personal_urls:
-            # 複数あった時の参考表示（Notionには先頭のみ反映）
-            extra_lines.append("・実施責任者URL候補：\n" + "\n".join([f"  - {u}" for u in personal_urls]))
-
-        msg = (
-            f"⏰ *本日のリマインド*\n"
-            f"・件名：*{title}*\n"
-            f"・担当：{display_names}\n"
-            f"・Notion：{notion_link}\n"
-            + ("\n".join(extra_lines) + "\n" if extra_lines else "")
-            + f"\n{mention_text} 対応お願いします。"
-        )
-
-        slack_post(DEFAULT_SLACK_CHANNEL, msg)
-        time.sleep(1)
-
-    print(f"Posted {len(pages)} reminder(s).")
-    
-        
-    today = today_iso(TZ)
 
 def extract_richtext(page: dict, prop: str) -> str:
     try:
@@ -451,6 +427,8 @@ def main():
             if chosen_url:
                 update_notion_url_property(page_id, chosen_url)
                 logging.info(f"[{title}] URL updated to {chosen_url}")
+                
+            MENTION_FIXED = "<@U09QNJB06DS>　<@U084EL20EV6>"
 
             mention_text = MENTION_FIXED
 
