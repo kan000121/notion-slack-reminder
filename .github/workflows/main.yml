@@ -1,4 +1,5 @@
-name: Notion → Slack Reminder
+name: Main
+
 
 on:
   schedule:
