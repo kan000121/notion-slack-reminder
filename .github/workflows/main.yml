@@ -1,50 +1,15 @@
-name: Main
-
+name: Schedule Probe
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # 5分おき（UTC基準）
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
-# 同時実行の重複防止（任意だけどおすすめ）
-concurrency:
-  group: notion-slack-reminder
-  cancel-in-progress: false
-
 jobs:
-  run:
+  ping:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install deps
+      - name: Print event & time
         run: |
-          python -m pip install --upgrade pip
-          pip install requests python-dotenv
-
-      - name: Print event
-        run: echo "EVENT=${GITHUB_EVENT_NAME}  AT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-
-
-      - name: Run reminder
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
-          TIMEZONE: Asia/Tokyo
-          LOG_PATH: reminder.log
-          PERSON_URL_MAP_JSON: ${{ secrets.PERSON_URL_MAP_JSON }}
-        run: python notion_slack_reminder.py
-
-      - name: Upload log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: reminder-log
-          path: reminder.log
-          retention-days: 3
+          echo "EVENT=${GITHUB_EVENT_NAME}"
+          date -u +"UTC %Y-%m-%d %H:%M:%S"
