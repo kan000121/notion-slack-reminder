@@ -435,7 +435,7 @@ def main():
                 f"・業務従事者：*{title}*\n"
                 f"・担当：{display_names}\n"
                 f"・Notion：{notion_link}\n"
-                + (f"・実施責任者URL：{chosen_url}\n" if chosen_url else "")
+                + (f"・面談調整URL：{chosen_url}\n" if chosen_url else "")
             )
 
             slack_post(DEFAULT_SLACK_CHANNEL, msg)
