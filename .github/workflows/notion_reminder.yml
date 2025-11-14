@@ -25,6 +25,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests python-dotenv
 
+      - name: Print event
+        run: echo "EVENT=${GITHUB_EVENT_NAME}  AT=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+
       - name: Run reminder
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
