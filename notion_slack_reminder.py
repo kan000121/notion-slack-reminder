@@ -401,22 +401,21 @@ def resolve_person_urls(names: list[str]) -> list[str]:
             urls.append(url)
     return urls
 
-# --- Main ---
 def main():
     today = today_iso(TIMEZONE)
-
     logging.info(f"=== Reminder run for {today} ===")
 
     try:
         pages = notion_query_today(DB_ID, "面談リマインド日", today)
         if not pages:
             logging.info("No reminders today.")
-
+            print("本日のリマインド対象はありません。")
             return
 
         user_dir = slack_fetch_user_directory()
         name_index = build_name_index(user_dir)
 
+        sent = 0
         for p in pages:
             title = extract_title(p, "業務従事者")
             page_id = extract_page_id(p)
@@ -427,10 +426,8 @@ def main():
             if chosen_url:
                 update_notion_url_property(page_id, chosen_url)
                 logging.info(f"[{title}] URL updated to {chosen_url}")
-                
-            MENTION_FIXED = "<@U09QNJB06DS>　<@U084EL20EV6>"
 
-            mention_text = MENTION_FIXED
+            mention_text = "<@U09QNJB06DS>　<@U084EL20EV6>"  # 固定メンション
 
             msg = (
                 f"⏰ *本日のリマインド*\n"
@@ -443,51 +440,17 @@ def main():
 
             slack_post(DEFAULT_SLACK_CHANNEL, msg)
             logging.info(f"[{title}] Slack通知送信済み → {display_names}")
+            sent += 1
 
-            time.sleep(1)
+            time.sleep(1)  # rate limit ケア
 
-
-            print("本日のリマインド対象はありません。")
-            return
-
-        for p in pages:
-            title_candidate = extract_richtext(p, "業務従事者")
-            title = title_candidate if title_candidate not in ("", "（未設定）") else (extract_title(p, "業務従事者") or "（無題）")
-            notion_link = page_url(p)
-
-            # ← ここが肝：People/テキスト両対応
-            jisseki_display, person_urls = build_display_and_urls(p)
-
-            # 固定メンション・・
-            mention_text = "<@U09QNJB06DS>　<@U084EL20EV6>"
-
-            # 文章：NotionページURL ＋ 実施責任者URL（複数なら全部）
-            lines = [
-                f"{mention_text}",
-                "【リマインド】",
-                f"{title}",
-                f"Notionページ：{notion_link}",
-                f"{jisseki_display}",
-            ]
-            if person_urls:
-                for u in person_urls:
-                    lines.append(f"実施責任者URL：{u}")
-            else:
-                lines.append("実施責任者URL：「（未登録）」")
-
-            msg = "\n".join(lines)
-
-            slack_post(SLACK_CHANNEL, msg)
-            logging.info(f"[{title}] 通知完了 → 実施責任者:{jisseki_display} / URLs:{person_urls or 'なし'}")
-            time.sleep(1)
-
-
-
-        logging.info(f"✅ Completed {len(pages)} reminder(s).")
+        logging.info(f"✅ Completed {sent} reminder(s).")
+        print(f"{sent}件送信しました。")
 
     except Exception as e:
         logging.error(f"❌ Error: {str(e)}", exc_info=True)
         raise e
+
 
 
         print(f"エラーが発生しました: {e}")
